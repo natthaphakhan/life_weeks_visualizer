@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ชีวิตเป็นสัปดาห์ — Visualizer</title>
+  <style>
+    :root{
+      --accent:#e63946; /* แดงสด */
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#9aa4b2;
+      --past:#4361ee;   /* น้ำเงินสด */
+      --present:#ffd60a;/* เหลืองสด */
+      --future:#adb5bd; /* เทาอ่อน */
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial;color:#e6eef6;background:linear-gradient(180deg,#071029 0%, #0f1724 100%);}
+    .app{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 12px;color:var(--muted)}
+
+    .controls{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+    .card{background:rgba(255,255,255,0.05);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=date], input[type=number], select{width:200px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:inherit}
+    button{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+
+    .meta{display:flex;gap:12px;align-items:center;margin-top:12px}
+    .stats{display:flex;gap:12px}
+    .stat{background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));padding:10px;border-radius:10px;min-width:120px}
+    .stat strong{display:block;font-size:16px}
+
+    /* grid */
+    .grid-wrap{margin-top:18px}
+    .grid{display:grid;grid-template-columns:repeat(52,10px);gap:3px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;overflow:auto}
+    .cell{width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.08)}
+    .cell.past{background:var(--past)}
+    .cell.present{outline:2px solid var(--present);background:var(--present);transform:scale(1.1)}
+    .cell.future{background:var(--future)}
+    .legend{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .legend .dot{width:14px;height:14px;border-radius:4px}
+
+    /* quote */
+    .quote{margin-top:14px;padding:12px;border-radius:10px;background:linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));font-style:italic}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    @media (max-width:760px){.grid{grid-template-columns:repeat(26,10px)} }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>แผนที่สัปดาห์ชีวิต — วัดสัปดาห์ที่ใช้ไปและที่เหลือ</h1>
+        <p class="lead">ป้อนวันเกิดของคุณเพื่อดูภาพรวมเป็นตารางสัปดาห์ — แสดงสัปดาห์ที่ผ่านไป สัปดาห์ปัจจุบัน และสัปดาห์ที่เหลือ ตามอายุขัยเฉลี่ยของโลก</p>
+      </div>
+    </header>
+
+    <div class="controls card">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+        <div>
+          <label>วันเกิด</label>
+          <input id="birthdate" type="date">
+        </div>
+        <div>
+          <label>ค่าอายุขัย (ปี) — แนะนำค่าเฉลี่ยโลก</label>
+          <input id="lifeExpectancy" type="number" min="1" step="0.1" value="73.3">
+          <div class="small">ค่าเริ่มต้น: 73.3 ปี (แหล่งข้อมูล: Our World in Data / WHO)</div>
+        </div>
+        <div>
+          <label>สไตล์แสดง</label>
+          <select id="styleToggle">
+            <option value="years">แถว = ปี (เริ่มต้น)</option>
+            <option value="continuous">ต่อเนื่อง (สัปดาห์ทั้งหมด)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="renderBtn">แสดงตาราง</button>
+          <button id="randomQuoteBtn" title="สุ่มคำคม">สุ่มคำคม</button>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="stats">
+          <div class="stat"><span class="small">อายุ (ปี)</span><strong id="ageYears">—</strong></div>
+          <div class="stat"><span class="small">สัปดาห์ที่ใช้</span><strong id="weeksLived">—</strong></div>
+          <div class="stat"><span class="small">สัปดาห์รวม (โดยประมาณ)</span><strong id="totalWeeks">—</strong></div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="small">แหล่งข้อมูลอ้างอิง: Our World in Data, WHO (ค่าอายุขัยเฉลี่ยโลก ปัจจุบันประมาณ 73.3 ปี)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-wrap">
+      <div id="grid" class="grid card" aria-hidden="true"></div>
+      <div class="legend small">
+        <div class="dot" style="background:var(--past)"></div><div>สัปดาห์ที่ผ่านไป</div>
+        <div class="dot" style="background:var(--present)"></div><div>สัปดาห์นี้</div>
+        <div class="dot" style="background:var(--future)"></div><div>สัปดาห์ที่เหลือ</div>
+      </div>
+
+      <div id="quote" class="quote card">"ใช้เวลาให้คุ้มค่า — สัปดาห์ทุกสัปดาห์มีความหมาย"</div>
+    </div>
+
+    <footer>
+      <div>คำเตือน: นี่เป็นการคำนวณโดยประมาณ ใช้ค่าอายุขัยเฉลี่ยเป็นข้อมูลอ้างอิงเท่านั้น — ผลลัพธ์ไม่ใช่การคาดการณ์ชีวิตส่วนตัว</div>
+    </footer>
+  </div>
+
+  <script>
+    const QUOTES = [
+      'ทุกสัปดาห์คือโอกาส — ใช้มันให้คุ้ม',
+      'ชีวิตสั้นลงทุกสัปดาห์ อย่าเก็บไว้ให้รอวันพรุ่งนี้',
+      'สิ่งสำคัญไม่ใช่จำนวนวัน แต่การมีคุณค่าในแต่ละวัน',
+      'เริ่มจากสิ่งเล็ก ๆ — สะสมเป็นชีวิตที่มีความหมาย',
+      'ถ้ารอให้ "พร้อม" คุณอาจรอไปทั้งชีวิต — เริ่มวันนี้',
+      'เวลาไม่คืนกลับมา จงลงทุนกับความสัมพันธ์และสุขภาพ',
+      'อย่าเสียเวลาพิสูจน์คนผิด ใช้เวลาเพื่อสิ่งที่สร้างสรรค์',
+      'วางแผน แต่จงยืดหยุ่น — ชีวิตมีความไม่แน่นอนเสมอ'
+    ];
+
+    const $ = id => document.getElementById(id);
+
+    function daysBetween(a, b){
+      const ms = b - a;
+      return Math.floor(ms / (1000*60*60*24));
+    }
+
+    function renderGrid(birthDateStr, lifeExpectancyYears, layout){
+      const grid = $('grid');
+      grid.innerHTML = '';
+      if(!birthDateStr) return;
+
+      const birth = new Date(birthDateStr + 'T00:00:00');
+      const today = new Date();
+      const ageMs = today - birth;
+      const ageYears = Math.floor(ageMs / (1000*60*60*24)/365.2425);
+
+      const daysLived = daysBetween(birth, today);
+      const weeksLived = Math.floor(daysLived / 7);
+
+      const weeksPerYear = 365.2425 / 7;
+      const totalWeeks = Math.round(lifeExpectancyYears * weeksPerYear);
+
+      $('ageYears').textContent = ageYears;
+      $('weeksLived').textContent = weeksLived.toLocaleString();
+      $('totalWeeks').textContent = totalWeeks.toLocaleString();
+
+      const nowWeekIndex = weeksLived;
+
+      let cols = 52; let rows = Math.ceil(totalWeeks / cols);
+      if(layout === 'continuous'){
+        cols = Math.min(70, Math.ceil(Math.sqrt(totalWeeks)));
+        rows = Math.ceil(totalWeeks / cols);
+        grid.style.gridTemplateColumns = `repeat(${cols},10px)`;
+      } else {
+        grid.style.gridTemplateColumns = `repeat(52,10px)`;
+      }
+
+      for(let i=0;i<totalWeeks;i++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if(i < nowWeekIndex) cell.classList.add('past');
+        else if(i === nowWeekIndex) cell.classList.add('present');
+        else cell.classList.add('future');
+
+        const weekStart = new Date(birth.getTime() + i*7*24*60*60*1000);
+        const weekEnd = new Date(weekStart.getTime() + 6*24*60*60*1000);
+        const wkLabel = `${weekStart.getFullYear()}/${(weekStart.getMonth()+1).toString().padStart(2,'0')}/${weekStart.getDate().toString().padStart(2,'0')}` +
+                        ` — ${weekEnd.getFullYear()}/${(weekEnd.getMonth()+1).toString().padStart(2,'0')}/${weekEnd.getDate().toString().padStart(2,'0')}`;
+        cell.title = `สัปดาห์ที่ ${i+1}: ${wkLabel}`;
+
+        grid.appendChild(cell);
+      }
+
+      grid.setAttribute('aria-hidden', 'false');
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const birthInput = $('birthdate');
+      const lifeInput = $('lifeExpectancy');
+      const btn = $('renderBtn');
+      const style = $('styleToggle');
+
+      const placeholder = new Date(); placeholder.setFullYear(placeholder.getFullYear()-30);
+      birthInput.value = placeholder.toISOString().slice(0,10);
+
+      function doRender(){
+        renderGrid(birthInput.value, parseFloat(lifeInput.value)||73.3, style.value);
+      }
+
+      btn.addEventListener('click', doRender);
+      lifeInput.addEventListener('change', doRender);
+      style.addEventListener('change', doRender);
+
+      $('randomQuoteBtn').addEventListener('click', ()=>{
+        const q = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+        $('quote').textContent = '"' + q + '"';
+      });
+
+      doRender();
+    });
+  </script>
+</body>
+</html>
